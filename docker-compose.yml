@@ -1,0 +1,46 @@
+version: '3'
+services:
+  helloworld:
+    image: rquackenbush/hello-world-loop
+    restart: unless-stopped
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.helloworld
+    networks:
+      - log-network
+
+  fluentd:
+    build:
+      context: ./logstack/fluentd
+    environment:
+      FLUENTD_CONF: fluentd.conf
+    volumes:
+      - ./logstack/fluentd/fluent.conf:/fluentd/etc/fluentd.conf
+    ports:
+      - "24224:24224"
+    networks:
+      - log-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+    networks:
+      - log-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - log-network
+
+networks:
+  log-network:
+    driver: bridge
